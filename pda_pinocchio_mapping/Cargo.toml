@@ -1,0 +1,12 @@
+[package]
+name = "pda_pinocchio_mapping"
+version = "0.1.0"
+edition = "2021"
+
+
+
+[dependencies]
+pinocchio = ">=0.9.0"
+bytemuck = {version = ">=1", features = ["derive"]}
+pinocchio-system = {version = ">= 0.3.0"}
+pinocchio-pubkey = { version = ">= 0.3.0" }
