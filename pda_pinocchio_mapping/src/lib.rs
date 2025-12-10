@@ -1,3 +1,4 @@
+#![no_std]
 use bytemuck::Pod;
 use pinocchio::pubkey::Pubkey;
 use pinocchio::{
@@ -11,19 +12,10 @@ use pinocchio_pubkey::derive_address;
 use pinocchio_system::instructions::CreateAccount;
 
 /**
- * Bumpy + Sizeable is considered opinionated: Trying to figure out a change
  */
 
 pub trait Bumpy {
     fn bump(&self) -> u8;
-}
-
-pub trait Sizeable: Pod {
-    const LEN: usize;
-}
-
-impl<T: Pod> Sizeable for T {
-    const LEN: usize = core::mem::size_of::<T>();
 }
 
 pub struct Mapping<'a> {
@@ -70,12 +62,13 @@ impl<'a> Mapping<'a> {
      * - `ProgramError` if account mismatch, invalid data, or system-instruction
      *   failures occur.
      */
-    pub fn set<T: Sizeable + Bumpy>(
+    pub fn set<T: Pod + Bumpy>(
         self,
         key: &Pubkey,
         value: T,
         account: &AccountInfo,
     ) -> ProgramResult {
+        let size_T = core::mem::size_of::<T>();
         let seed = [self.name.as_ref(), key.as_slice(), &[value.bump()]];
 
         let account_pda = derive_address(&seed, None, self.program_id);
@@ -92,14 +85,14 @@ impl<'a> Mapping<'a> {
             CreateAccount {
                 from: self.payer,
                 to: account,
-                lamports: Rent::get()?.minimum_balance(T::LEN),
-                space: T::LEN as u64,
+                lamports: Rent::get()?.minimum_balance(size_T),
+                space: size_T as u64,
                 owner: self.program_id,
             }
             .invoke_signed(&[seeds.clone()])?;
 
             let mut data = account.try_borrow_mut_data()?;
-            if data.len() != T::LEN {
+            if data.len() != size_T {
                 return Err(ProgramError::InvalidAccountData);
             }
 
@@ -112,7 +105,7 @@ impl<'a> Mapping<'a> {
         } else {
             // Account already exists - overwrite
             let mut data = account.try_borrow_mut_data()?;
-            if data.len() != T::LEN {
+            if data.len() != size_T {
                 return Err(ProgramError::InvalidAccountData);
             }
 
@@ -153,12 +146,13 @@ impl<'a> Mapping<'a> {
      * - `ProgramError::UninitializedAccount` if the PDA does not exist or is not owned.
      * - `ProgramError::InvalidAccountData` if the stored data layout does not match `T`.
      */
-    pub fn update<T: Sizeable + Bumpy>(
+    pub fn update<T: Pod + Bumpy>(
         self,
         key: &Pubkey,
         value: T,
         account: &AccountInfo,
     ) -> ProgramResult {
+        let size_T = core::mem::size_of::<T>();
         let seed = [self.name.as_ref(), key.as_slice(), &[value.bump()]];
 
         let account_pda = derive_address(&seed, None, self.program_id);
@@ -169,7 +163,7 @@ impl<'a> Mapping<'a> {
         } else {
             // Account already exists - overwrite
             let mut data = account.try_borrow_mut_data()?;
-            if data.len() != T::LEN {
+            if data.len() != size_T {
                 return Err(ProgramError::InvalidAccountData);
             }
 
@@ -212,12 +206,13 @@ impl<'a> Mapping<'a> {
      * - Propagated errors from system account creation or rent retrieval.
      */
 
-    pub fn create<T: Sizeable + Bumpy>(
+    pub fn create<T: Pod + Bumpy>(
         self,
         key: &Pubkey,
         value: T,
         account: &AccountInfo,
     ) -> ProgramResult {
+        let size_T = core::mem::size_of::<T>();
         let seed = [self.name.as_ref(), key.as_slice(), &[value.bump()]];
 
         let account_pda = derive_address(&seed, None, self.program_id);
@@ -234,14 +229,14 @@ impl<'a> Mapping<'a> {
             CreateAccount {
                 from: self.payer,
                 to: account,
-                lamports: Rent::get()?.minimum_balance(T::LEN),
-                space: T::LEN as u64,
+                lamports: Rent::get()?.minimum_balance(size_T),
+                space: size_T as u64,
                 owner: self.program_id,
             }
             .invoke_signed(&[seeds.clone()])?;
 
             let mut data = account.try_borrow_mut_data()?;
-            if data.len() != T::LEN {
+            if data.len() != size_T {
                 return Err(ProgramError::InvalidAccountData);
             }
 
