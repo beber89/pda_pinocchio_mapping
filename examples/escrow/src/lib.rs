@@ -1,11 +1,27 @@
-use pinocchio::{account_info::AccountInfo, entrypoint, pubkey::Pubkey, ProgramResult};
+#![cfg_attr(not(test), no_std)]
+use pinocchio::{
+    account_info::AccountInfo, entrypoint, nostd_panic_handler, pubkey::Pubkey, ProgramResult,
+};
 
 use crate::instructions::EscrowInstrctions;
 
-mod instructions;
-mod state;
+#[cfg(test)]
+extern crate std;
+
+extern crate alloc;
+pub use alloc::vec::Vec;
+
+// Use the no_std panic handler.
+#[cfg(target_os = "solana")]
+nostd_panic_handler!();
+
+#[cfg(test)]
 mod tests;
 
+mod instructions;
+mod state;
+
+#[cfg(not(feature = "no-entrypoint"))]
 entrypoint!(process_instruction);
 
 pinocchio_pubkey::declare_id!("EBhru2Pe8LgDarZW128w9jMsJoVTukXZHY6Jf5ZmRqVi");
